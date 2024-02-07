@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 data class TransactionPost(
     @field:JsonProperty("valor")
-    val valor: Int? = null,
+    val valor: Number? = null,
 
     @field:JsonProperty("tipo")
     val tipo: String? = null,

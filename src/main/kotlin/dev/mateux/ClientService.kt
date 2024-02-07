@@ -1,102 +1,87 @@
 package dev.mateux
 
-import dev.mateux.model.*
+import dev.mateux.model.Balance
+import dev.mateux.model.StatementResponse
+import dev.mateux.model.Transaction
+import dev.mateux.model.TransactionResponse
 import io.agroal.api.AgroalDataSource
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.WebApplicationException
+import java.sql.Connection
 import java.sql.Timestamp
 
 @ApplicationScoped
 class ClientService(
     @Inject
-    private val dataSource: AgroalDataSource
+    private var dataSource: AgroalDataSource
 ) {
     private val keyLock = KeyLock<String>()
+    private val cache = mutableMapOf<Int, Pair<Int, Int>>()
 
     fun addTransaction(id: String, value: Int, type: String, description: String): TransactionResponse {
         return keyLock.withLock(id) {
-            var (balance, limit) = dataSource.connection.use { connection ->
-                connection.prepareStatement("SELECT saldo, limite FROM clientes WHERE id = ?")
-                    .use {
-                        it.setInt(1, id.toInt())
-                        it.executeQuery().use { resultSet ->
-                            if (resultSet.next()) {
-                                resultSet.getInt("saldo") to resultSet.getInt("limite")
-                            } else {
-                                throw WebApplicationException(404)
+            dataSource.connection.use { connection ->
+                connection.autoCommit = false
+
+                try {
+                    var (balance, limit) = getBalanceAndLimit(id.toInt(), connection)
+
+                    when (type) {
+                        "d" -> {
+                            balance -= value
+
+                            if (balance < -limit) {
+                                throw WebApplicationException(422)
                             }
+
+                            connection.prepareStatement("UPDATE clientes SET saldo = saldo - ? WHERE id = ?")
+                                .use {
+                                    it.setInt(1, value)
+                                    it.setInt(2, id.toInt())
+                                    it.executeUpdate()
+                                }
+                        }
+                        "c" -> {
+                            connection.prepareStatement("UPDATE clientes SET saldo = saldo + ? WHERE id = ?")
+                                .use {
+                                    it.setInt(1, value)
+                                    it.setInt(2, id.toInt())
+                                    it.executeUpdate()
+                                }
+
+                            balance += value
                         }
                     }
-            }
 
-            when (type) {
-                TransactionTypes.DEBIT.value -> {
-                    balance -= value
+                    connection.prepareStatement("INSERT INTO transacoes (cliente_id, valor, tipo, descricao) VALUES (?, ?, ?, ?)")
+                        .use { statement ->
+                            statement.setInt(1, id.toInt())
+                            statement.setInt(2, value)
+                            statement.setString(3, type)
+                            statement.setString(4, description)
+                            statement.executeUpdate()
+                        }
 
-                    if (balance < -limit) {
-                        throw WebApplicationException(422)
-                    }
-
-                    dataSource.connection.use { connection ->
-                        connection.prepareStatement("UPDATE clientes SET saldo = saldo - ? WHERE id = ?")
-                            .use {
-                                it.setInt(1, value)
-                                it.setInt(2, id.toInt())
-                                it.executeUpdate()
-                            }
-                    }
-                }
-                TransactionTypes.CREDIT.value -> {
-                    dataSource.connection.use { connection ->
-                        connection.prepareStatement("UPDATE clientes SET saldo = saldo + ? WHERE id = ?")
-                            .use {
-                                it.setInt(1, value)
-                                it.setInt(2, id.toInt())
-                                it.executeUpdate()
-                            }
-                    }
-
-                    balance += value
-                }
-                else -> {
-                    throw WebApplicationException(400)
+                    connection.commit()
+                    cache[id.toInt()] = balance to limit
+                    return@withLock TransactionResponse(balance, limit)
+                } catch (e: Exception) {
+                    connection.rollback()
+                    throw e
+                } finally {
+                    connection.autoCommit = true
                 }
             }
-
-            dataSource.connection.use { connection ->
-                connection.prepareStatement("INSERT INTO transacoes (cliente_id, valor, tipo, descricao) VALUES (?, ?, CAST(? AS tipo_transacao), ?)")
-                    .use { statement ->
-                        statement.setInt(1, id.toInt())
-                        statement.setInt(2, value)
-                        statement.setString(3, type)
-                        statement.setString(4, description)
-                        statement.executeUpdate()
-                    }
-            }
-
-            return@withLock TransactionResponse(balance, limit)
         }
     }
 
     fun getStatement(id: String): StatementResponse {
         return keyLock.withLock(id) {
-            val (balance, limit) = dataSource.connection.use { connection ->
-                connection.prepareStatement("SELECT saldo, limite FROM clientes WHERE id = ?")
-                    .use {
-                        it.setInt(1, id.toInt())
-                        it.executeQuery().use { resultSet ->
-                            if (resultSet.next()) {
-                                resultSet.getInt("saldo") to resultSet.getInt("limite")
-                            } else {
-                                throw WebApplicationException(404)
-                            }
-                        }
-                    }
-            }
+            dataSource.connection.use { connection ->
+                val (balance, limit) = getBalanceAndLimit(id.toInt(), connection)
 
-            val transactions = dataSource.connection.use { connection ->
-                connection.prepareStatement("SELECT descricao, tipo, valor, realizada_em FROM transacoes WHERE cliente_id = ?")
+                val transactions = connection.prepareStatement("SELECT descricao, tipo, valor, realizada_em FROM transacoes WHERE cliente_id = ? ORDER BY id DESC LIMIT 10")
                     .use {
                         it.setInt(1, id.toInt())
                         it.executeQuery().use { resultSet ->
@@ -114,15 +99,31 @@ class ClientService(
                             }.toList()
                         }
                     }
-            }
 
-            return@withLock StatementResponse(
-                Balance(
-                    balance,
-                    Timestamp(System.currentTimeMillis()).toInstant().toString(),
-                    limit
-                ), transactions
-            )
+                return@withLock StatementResponse(
+                    Balance(
+                        balance,
+                        Timestamp(System.currentTimeMillis()).toInstant().toString(),
+                        limit
+                    ), transactions
+                )
+            }
+        }
+    }
+
+    private fun getBalanceAndLimit(id: Int, connection: Connection): Pair<Int, Int>{
+        return cache.getOrElse(id) {
+            connection.prepareStatement("SELECT saldo, limite FROM clientes WHERE id = ? FOR UPDATE")
+                .use {
+                    it.setInt(1, id.toInt())
+                    it.executeQuery().use { resultSet ->
+                        if (resultSet.next()) {
+                            resultSet.getInt("saldo") to resultSet.getInt("limite")
+                        } else {
+                            throw WebApplicationException(404)
+                        }
+                    }
+                }
         }
     }
 }

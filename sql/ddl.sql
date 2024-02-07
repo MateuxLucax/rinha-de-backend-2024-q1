@@ -1,3 +1,4 @@
+--CREATE UNLOGGED TABLE IF NOT EXISTS clientes (
 CREATE TABLE IF NOT EXISTS clientes (
   id SERIAL PRIMARY KEY,
   nome VARCHAR(255) NOT NULL,
@@ -5,13 +6,12 @@ CREATE TABLE IF NOT EXISTS clientes (
   saldo INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE TYPE  tipo_transacao AS ENUM ('c', 'd');
-
+--CREATE UNLOGGED TABLE IF NOT EXISTS transacoes (
 CREATE TABLE IF NOT EXISTS transacoes (
   id SERIAL PRIMARY KEY,
   cliente_id INTEGER NOT NULL,
   valor INTEGER NOT NULL,
-  tipo tipo_transacao NOT NULL,
+  tipo CHAR  NOT NULL,
   descricao VARCHAR(255) NOT NULL,
   realizada_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (cliente_id) REFERENCES clientes(id)
