@@ -111,11 +111,11 @@ class ClientService(
         }
     }
 
-    private fun getBalanceAndLimit(id: Int, connection: Connection): Pair<Int, Int>{
+    private fun getBalanceAndLimit(id: Int, connection: Connection): Pair<Int, Int> {
         return cache.getOrElse(id) {
             connection.prepareStatement("SELECT saldo, limite FROM clientes WHERE id = ? FOR UPDATE")
                 .use {
-                    it.setInt(1, id.toInt())
+                    it.setInt(1, id)
                     it.executeQuery().use { resultSet ->
                         if (resultSet.next()) {
                             resultSet.getInt("saldo") to resultSet.getInt("limite")

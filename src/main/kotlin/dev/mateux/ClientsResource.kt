@@ -17,7 +17,7 @@ class ClientsResource(
     @Path("/{id}/transacoes")
     @Produces(MediaType.APPLICATION_JSON)
     fun transaction(body: TransactionPost, id: String): TransactionResponse {
-        if (body.tipo == null || body.valor == null || body.descricao.isNullOrEmpty() || body.valor !is Int || body.tipo !in listOf("c", "d")) {
+        if (body.tipo == null || body.valor == null || body.descricao.isNullOrEmpty() || body.descricao.length > 10 || body.valor !is Int || body.tipo !in listOf("c", "d")) {
             throw WebApplicationException(422)
         }
 

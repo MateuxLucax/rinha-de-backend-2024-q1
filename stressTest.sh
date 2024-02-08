@@ -2,9 +2,9 @@
 
 # clears db
 
-docker compose -f sql/docker-compose.yml down
-rm -rf sql/data/db
-docker compose -f sql/docker-compose.yml up -d
+#docker compose -f sql/docker-compose.yml down
+#rm -rf sql/data/db
+#docker compose -f sql/docker-compose.yml up -d
 
 RESULTS_WORKSPACE="$(pwd)/load-test/user-files/results"
 GATLING_BIN_DIR=$HOME/Developer/gatling/bin
