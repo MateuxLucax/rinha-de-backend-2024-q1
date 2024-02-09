@@ -3,6 +3,7 @@ version: "3.5"
 services:
   api01: &api
     image: mateuxlucax/rinha-de-backend-2024-q1-kotlin:latest
+    container_name: api01
     hostname: api01
     ports:
       - "8081:8080"
@@ -11,17 +12,24 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.6"
-          memory: "200MB"
+          cpus: "0.5"
+          memory: "180MB"
 
   api02:
     <<: *api
     hostname: api02
+    container_name: api02
     ports:
       - "8082:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "180MB"
 
   nginx:
     image: nginx:latest
+    container_name: nginx
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -32,11 +40,12 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.17"
-          memory: "10MB"
+          cpus: "0.2"
+          memory: "30MB"
 
   db:
     image: postgres:latest
+    container_name: db
     hostname: db
     environment:
       - POSTGRES_PASSWORD=123
@@ -49,10 +58,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.13"
-          memory: "140MB"
+          cpus: "0.3"
+          memory: "160MB"
 
 networks:
   default:
     driver: bridge
-    name: rinha-nginx-2024q1
+    name: rinha-de-backend-2024-q1-kotlin

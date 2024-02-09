@@ -9,8 +9,7 @@ import jakarta.ws.rs.core.MediaType
 
 @Path("/clientes")
 class ClientsResource(
-    @Inject
-    private var service: ClientService
+    @Inject private var service: ClientService
 ) {
 
     @POST
