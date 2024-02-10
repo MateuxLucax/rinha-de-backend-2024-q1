@@ -23,7 +23,7 @@ jobs:
 
       - name: Build Quarkus Application
         run: |
-          ./gradlew build -Pnative -Dquarkus.native.container-build=true
+          ./gradlew build -Dquarkus.package.type=native -Dquarkus.native.container-build=true
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
