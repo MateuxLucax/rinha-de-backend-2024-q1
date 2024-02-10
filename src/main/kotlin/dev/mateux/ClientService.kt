@@ -20,7 +20,7 @@ class ClientService(
             connection.autoCommit = false
 
             try {
-                var (balance, limit) = getBalanceAndLimit(id.toInt(), connection)
+                var (balance, limit) = getBalanceAndLimit(id.toInt(), connection, true)
 
                 when (type) {
                     "d" -> {
@@ -102,8 +102,8 @@ class ClientService(
         }
     }
 
-    private fun getBalanceAndLimit(id: Int, connection: Connection): Pair<Int, Int> {
-        return connection.prepareStatement("SELECT saldo, limite FROM clientes WHERE id = ? FOR UPDATE")
+    private fun getBalanceAndLimit(id: Int, connection: Connection, forUpdate: Boolean = false): Pair<Int, Int> {
+        return connection.prepareStatement("SELECT saldo, limite FROM clientes WHERE id = ?" + if (forUpdate) " FOR UPDATE" else "")
             .use {
                 it.setInt(1, id)
                 it.executeQuery().use { resultSet ->

@@ -1,0 +1,46 @@
+name: Build and Deploy Quarkus Application
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: echo "Starting Build and Deploy Quarkus Application"
+        name: Checkout Repository
+      - uses: actions/checkout@v4
+
+      - run: echo "Setting up Java"
+        name: Set up Java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Build Quarkus Application
+        run: |
+          ./gradlew clean install -Pnative -Dquarkus.native.container-build=true
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: false
+          tags: your-docker-username/your-quarkus-app:latest
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push Docker Image to Docker Hub
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: mateuxlucax/rinha-de-backend-2024-q1-kotlin:latest
