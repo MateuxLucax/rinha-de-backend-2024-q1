@@ -25,23 +25,16 @@ jobs:
         run: |
           ./gradlew build -Pnative -Dquarkus.native.container-build=true
 
-      - name: Build Docker Image
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          file: ./src/main/docker/Dockerfile.native-micro
-          push: false
-          tags: mateuxlucax/rinha-de-backend-2024-q1-kotlin:latest
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push Docker Image to Docker Hub
+      - name: Build Docker Image and Push to Docker Hub
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./src/main/docker/Dockerfile.native-micro
           push: true
           tags: mateuxlucax/rinha-de-backend-2024-q1-kotlin:latest
