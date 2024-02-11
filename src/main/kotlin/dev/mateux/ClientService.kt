@@ -20,34 +20,32 @@ class ClientService(
             connection.autoCommit = false
 
             try {
-                var (balance, limit) = getBalanceAndLimit(id.toInt(), connection, true)
-
-                when (type) {
-                    "d" -> {
-                        balance -= value
-
-                        if (balance < -limit) {
-                            throw WebApplicationException(422)
+                var (balance, limit) = connection.prepareStatement("SELECT saldo, limite FROM clientes WHERE id = ? FOR UPDATE")
+                    .use {
+                        it.setInt(1, id.toInt())
+                        it.executeQuery().use { resultSet ->
+                            if (resultSet.next()) {
+                                resultSet.getInt("saldo") to resultSet.getInt("limite")
+                            } else {
+                                throw WebApplicationException(404)
+                            }
                         }
-
-                        connection.prepareStatement("UPDATE clientes SET saldo = saldo - ? WHERE id = ?")
-                            .use {
-                                it.setInt(1, value)
-                                it.setInt(2, id.toInt())
-                                it.executeUpdate()
-                            }
                     }
-                    "c" -> {
-                        connection.prepareStatement("UPDATE clientes SET saldo = saldo + ? WHERE id = ?")
-                            .use {
-                                it.setInt(1, value)
-                                it.setInt(2, id.toInt())
-                                it.executeUpdate()
-                            }
 
-                        balance += value
+                if (type == "d") {
+                    if (balance - value < -limit) {
+                        throw WebApplicationException(400)
                     }
                 }
+
+                balance += if (type == "d") -value else value
+
+                connection.prepareStatement("UPDATE clientes SET saldo = ? WHERE id = ?")
+                    .use {
+                        it.setInt(1, value)
+                            it.setInt(2, id.toInt())
+                        it.executeUpdate()
+                    }
 
                 connection.prepareStatement("INSERT INTO transacoes (cliente_id, valor, tipo, descricao) VALUES (?, ?, ?, ?)")
                     .use { statement ->
@@ -71,7 +69,17 @@ class ClientService(
 
     fun getStatement(id: String): StatementResponse {
         dataSource.connection.use { connection ->
-            val (balance, limit) = getBalanceAndLimit(id.toInt(), connection)
+            val (balance, limit) = connection.prepareStatement("SELECT saldo, limite FROM clientes WHERE id = ?")
+                .use {
+                    it.setInt(1, id.toInt())
+                    it.executeQuery().use { resultSet ->
+                        if (resultSet.next()) {
+                            resultSet.getInt("saldo") to resultSet.getInt("limite")
+                        } else {
+                            throw WebApplicationException(404)
+                        }
+                    }
+                }
 
             val transactions = connection.prepareStatement("SELECT descricao, tipo, valor, realizada_em FROM transacoes WHERE cliente_id = ? ORDER BY id DESC LIMIT 10")
                 .use {
