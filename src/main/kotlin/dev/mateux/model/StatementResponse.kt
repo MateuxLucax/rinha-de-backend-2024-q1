@@ -7,7 +7,7 @@ data class StatementResponse(
     val balance: Balance? = null,
 
     @field:JsonProperty("ultimas_transacoes")
-    val transactions: List<Transaction>? = null,
+    val statementTransactions: List<StatementTransaction>? = null,
 )
 
 data class Balance(
@@ -21,7 +21,7 @@ data class Balance(
     val value: Int? = null,
 )
 
-data class Transaction(
+data class StatementTransaction(
     @field:JsonProperty("descricao")
     val description: String? = null,
 

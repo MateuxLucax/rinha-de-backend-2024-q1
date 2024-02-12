@@ -1,6 +1,5 @@
 CREATE TABLE IF NOT EXISTS clientes (
   id SERIAL PRIMARY KEY,
-  nome VARCHAR(48) NOT NULL,
   limite INTEGER NOT NULL,
   saldo INTEGER NOT NULL DEFAULT 0
 ) WITH (autovacuum_enabled = false);
@@ -17,13 +16,13 @@ CREATE TABLE IF NOT EXISTS transacoes (
 
 CREATE INDEX IF NOT EXISTS idx_transacoes_cliente_id ON transacoes (cliente_id);
 
-INSERT INTO clientes (id, nome, limite)
+INSERT INTO clientes (id, limite)
 VALUES
-(1, 'o barato sai caro', 1000 * 100),
-(2, 'zan corp ltda', 800 * 100),
-(3, 'les cruders', 10000 * 100),
-(4, 'padaria joia de cocaia', 100000 * 100),
-(5, 'kid mais', 5000 * 100)
+(1, 1000 * 100),
+(2, 800 * 100),
+(3, 10000 * 100),
+(4, 100000 * 100),
+(5, 5000 * 100)
 ON CONFLICT DO NOTHING;
 
 --CREATE OR REPLACE FUNCTION atualiza_saldo()

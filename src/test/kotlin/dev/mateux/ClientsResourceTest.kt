@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test
 
 @QuarkusTest
 class ClientsResourceTest {
-
     @Test
     fun testHelloEndpoint() {
 //        given()
