@@ -14,8 +14,3 @@ services:
       - "5432:5432"
     volumes:
       - ./ddl.sql:/docker-entrypoint-initdb.d/script.sql
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: "160MB"
