@@ -1,3 +1,13 @@
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
 CREATE TABLE IF NOT EXISTS clientes (
   id SERIAL PRIMARY KEY,
   limite INTEGER NOT NULL,
@@ -24,34 +34,3 @@ VALUES
 (4, 100000 * 100),
 (5, 5000 * 100)
 ON CONFLICT DO NOTHING;
-
---CREATE OR REPLACE FUNCTION atualiza_saldo()
---RETURNS TRIGGER AS $$
---DECLARE
---    saldo_atual INTEGER;
---    limite_atual INTEGER;
---BEGIN
---    SELECT saldo, limite
---      INTO saldo_atual, limite_atual
---      FROM clientes
---     WHERE id = NEW.cliente_id
---       FOR UPDATE;
---
---    IF NEW.tipo = 'd' AND (saldo_atual - NEW.valor) < -limite_atual THEN
---        RAISE EXCEPTION 'Saldo insuficiente para a transação de ID %', NEW.id;
---    END IF;
---
---    IF NEW.tipo = 'd' THEN
---        UPDATE clientes SET saldo = saldo - NEW.valor WHERE id = NEW.cliente_id;
---    ELSE
---        UPDATE clientes SET saldo = saldo + NEW.valor WHERE id = NEW.cliente_id;
---    END IF;
---
---    RETURN NEW;
---END;
---$$ LANGUAGE plpgsql;
---
---CREATE TRIGGER atualiza_saldo_trigger
---AFTER INSERT ON transacoes
---FOR EACH ROW
---EXECUTE FUNCTION atualiza_saldo();

@@ -1,6 +1,7 @@
 package dev.mateux.entities
 
 import io.quarkus.runtime.annotations.RegisterForReflection
+import jakarta.persistence.Cacheable
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
@@ -12,6 +13,7 @@ import jakarta.ws.rs.WebApplicationException
 @Entity
 @Table(name = "clientes")
 @RegisterForReflection
+@Cacheable
 class Client(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

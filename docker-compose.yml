@@ -2,27 +2,28 @@ version: "3.5"
 
 services:
   api01: &api
-    image: mateuxlucax/rinha-de-backend-2024-q1-kotlin:latest
+    image: mateuxlucax/rinha-de-backend-2024-q1-kotlin:native
     container_name: api01
     hostname: api01
-    ports:
-      - "8081:8080"
+    environment:
+      - QUARKUS_HTTP_PORT=8081
+      - DATABASE_URL=jdbc:postgresql://:5432/rinha
     depends_on:
-      - db
-    networks:
-      - rinha-network
+      db:
+        condition: service_healthy
+    network_mode: host
     deploy:
       resources:
         limits:
-          cpus: "0.3"
-          memory: "130MB"
+          cpus: "0.25"
+          memory: "100MB"
 
   api02:
     <<: *api
     hostname: api02
     container_name: api02
-    ports:
-      - "8082:8080"
+    environment:
+      - QUARKUS_HTTP_PORT=8082
 
   nginx:
     image: nginx:latest
@@ -32,15 +33,12 @@ services:
     depends_on:
       - api01
       - api02
-    ports:
-      - "9999:9999"
-    networks:
-      - rinha-network
+    network_mode: host
     deploy:
       resources:
         limits:
           cpus: "0.2"
-          memory: "40MB"
+          memory: "50MB"
 
   db:
     image: postgres:latest
@@ -50,17 +48,18 @@ services:
       - POSTGRES_PASSWORD=123
       - POSTGRES_USER=admin
       - POSTGRES_DB=rinha
-    ports:
-      - "5432:5432"
     volumes:
       - ./sql/ddl.sql:/docker-entrypoint-initdb.d/script.sql
-    networks:
-      - rinha-network
+    network_mode: host
+    command: postgres -c 'max_connections=300' -c 'fsync=off' -c 'synchronous_commit=off' -c 'checkpoint_timeout=1d' -c 'full_page_writes=false'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 5s
     deploy:
       resources:
         limits:
-          cpus: "0.7"
-          memory: "250MB"
-
-networks:
-  rinha-network:
+          cpus: "0.9"
+          memory: "300MB"

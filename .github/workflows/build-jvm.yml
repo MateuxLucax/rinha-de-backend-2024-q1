@@ -37,4 +37,4 @@ jobs:
           context: .
           file: ./src/main/docker/Dockerfile.jvm
           push: true
-          tags: mateuxlucax/rinha-de-backend-2024-q1-kotlin:latest
+          tags: mateuxlucax/rinha-de-backend-2024-q1-kotlin:jvm

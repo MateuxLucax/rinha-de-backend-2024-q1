@@ -1,6 +1,7 @@
 package dev.mateux.entities
 
 import io.quarkus.runtime.annotations.RegisterForReflection
+import jakarta.persistence.Cacheable
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
@@ -13,6 +14,7 @@ import java.sql.Timestamp
 @Entity
 @Table(name = "transacoes")
 @RegisterForReflection
+@Cacheable
 class Transaction(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,6 +30,15 @@ class Transaction(
     @Column(name = "realizada_em")
     val createdAt: Timestamp = Timestamp(System.currentTimeMillis()),
 ) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Transaction
+
+        return id == other.id
+    }
+
     override fun hashCode(): Int {
         return id
     }
