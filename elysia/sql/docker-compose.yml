@@ -1,0 +1,17 @@
+version: "3.5"
+
+services:
+  rinha-db:
+    container_name: rinha-db
+    image: postgres:latest
+    hostname: db
+    environment:
+      - POSTGRES_PASSWORD=123
+      - POSTGRES_USER=admin
+      - POSTGRES_DB=rinha
+    restart: unless-stopped
+    command: postgres -c 'max_connections=128'
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./ddl.sql:/docker-entrypoint-initdb.d/script.sql

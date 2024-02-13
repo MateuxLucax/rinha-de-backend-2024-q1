@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "rinha-de-backend-2024-q1-dart",
+      "program": "bin/server.dart",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define-from-file",
+        "env.json"
+      ]
+    }
+  ]
+}

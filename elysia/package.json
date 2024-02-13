@@ -1,0 +1,16 @@
+{
+  "name": "elysia",
+  "version": "1.0.50",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts"
+  },
+  "dependencies": {
+    "elysia": "latest",
+    "install": "^0.13.0",
+    "postgres": "^3.4.3"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "module": "src/index.js"
+}
