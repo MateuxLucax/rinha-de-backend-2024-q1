@@ -4,7 +4,9 @@ import sql from "./database";
 
 const limits: Record<number, number> = {}
 
-const app = new Elysia()
+await tryGetLimit();
+
+export const app = new Elysia()
   .get('/clientes/:id/extrato', async ({ params: { id }, set }) => {
     const clientId = parseInt(id);
     if (clientId > 5 || clientId < 1) {
@@ -22,13 +24,13 @@ const app = new Elysia()
         total: balance[0].saldo as number,
         limite: limits[clientId],
         data_extrato: new Date().toISOString(),
-        transacoes: transactions.map((transaction: any) => ({
-          tipo: transaction.tipo,
-          valor: transaction.valor,
-          descricao: transaction.descricao,
-          realizada_em: new Date(transaction.realizada_em).toISOString,
-        }))
-      }
+      },
+      ultimas_transacoes: transactions.map(({ tipo, valor, descricao, realizada_em }) => ({
+        tipo: tipo as string,
+        valor: valor as number,
+        descricao: descricao as string,
+        realizada_em: new Date(realizada_em * 1000).toISOString(),
+      }))
     }
   })
   .post('/clientes/:id/transacoes', async ({ params: { id }, body, set }) => {
@@ -48,7 +50,7 @@ const app = new Elysia()
       ? await sql`SELECT creditar(${clientId}, ${value}, ${description}) AS saldo` 
       : await sql`SELECT debitar(${clientId}, ${value}, ${description}, ${limits[clientId]}) AS saldo`;
 
-    if (results.length == 0) {
+    if (results[0].saldo == null) {
       set.status = 422;
       return;
     }
@@ -60,13 +62,25 @@ const app = new Elysia()
   })
   .listen(Env.port);
 
-  console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
-);
+console.log(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`);
 
-const limitResult = await sql`SELECT id, limite FROM clientes`;
-for (const { id, limite } of limitResult) {
-  limits[id] = limite;
+export async function tryGetLimit({ tries = 1 } = {}) {
+  if (tries > 10) throw new Error('🤬 Could not retrieve limits');
+
+  try {
+    const limitResult = await sql`SELECT id, limite FROM clientes`;
+    for (const { id, limite } of limitResult) {
+      limits[id] = limite;
+    }
+
+    if (limitResult.length == 5) {
+      console.log('🤯 Limits loaded');
+      return;
+    }
+  } catch(_) {
+    console.log(`🤔 Trying to retrieve limits again in ${tries}s`);
+    await new Promise(resolve => setTimeout(resolve, 1000 * tries));
+  }
+
+  return tryGetLimit({ tries: ++tries });
 }
-
-export default app;

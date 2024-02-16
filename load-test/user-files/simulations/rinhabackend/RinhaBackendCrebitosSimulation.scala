@@ -267,7 +267,7 @@ class RinhaBackendCrebitosSimulation
         ),
         creditos.inject(
           rampUsersPerSec(1).to(110).during(2.minutes),
-          constantUsersPerSec(110).during(2.minutes)
+         constantUsersPerSec(110).during(2.minutes)
         ),
         extratos.inject(
           rampUsersPerSec(1).to(10).during(2.minutes),

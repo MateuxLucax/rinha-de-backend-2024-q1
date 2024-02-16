@@ -23,5 +23,5 @@ COPY --from=prerelease /usr/src/app/src src
 LABEL maintainer="Mateus Lucas Cruz Brandt <mateuxlucax@gmail.com>"
 
 USER bun
-EXPOSE 8080/tcp
+EXPOSE 80/tcp
 ENTRYPOINT [ "bun", "run", "src/index.ts" ]
