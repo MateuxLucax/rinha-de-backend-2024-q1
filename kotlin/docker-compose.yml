@@ -7,7 +7,7 @@ services:
     hostname: api01
     environment:
       - QUARKUS_HTTP_PORT=8081
-      - DATABASE_URL=jdbc:postgresql://:5432/rinha
+      - DATABASE_URL=jdbc:postgresql://127.0.0.1:5432/rinha
     depends_on:
       db:
         condition: service_healthy

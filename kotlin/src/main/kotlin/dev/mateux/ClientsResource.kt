@@ -1,25 +1,20 @@
 package dev.mateux
 
-import dev.mateux.entities.Client
-import dev.mateux.entities.Transaction
 import dev.mateux.model.*
+import io.agroal.api.AgroalDataSource
 import io.smallrye.common.annotation.RunOnVirtualThread
 import jakarta.inject.Inject
-import jakarta.persistence.EntityManager
-import jakarta.persistence.LockModeType
-import jakarta.transaction.Transactional
 import jakarta.ws.rs.*
 import jakarta.ws.rs.core.MediaType
 import java.sql.Timestamp
 
 @Path("/clientes")
 class ClientsResource(
-    @Inject private var entityManager: EntityManager,
+    @Inject private var datasource: AgroalDataSource,
 ) {
     @POST
     @Path("/{id}/transacoes")
     @Produces(MediaType.APPLICATION_JSON)
-    @Transactional
     @RunOnVirtualThread
     fun transaction(body: TransactionPost, id: String): TransactionResponse {
         if (body.tipo == null || body.valor == null || body.descricao.isNullOrEmpty() || body.descricao.length > 10 || body.valor !is Int || body.tipo !in listOf("c", "d")) {
@@ -30,28 +25,27 @@ class ClientsResource(
             throw WebApplicationException(404)
         }
 
-        val client: Client = entityManager.find(Client::class.java, id, LockModeType.PESSIMISTIC_WRITE)
-            ?: throw WebApplicationException(404)
+        try {
+            val (balance, limit) = datasource.connection.use { connection ->
+                connection.prepareStatement("SELECT new_saldo, limite FROM update_saldo_cliente(?, ?, ?, ?)").use { ptmt ->
+                    ptmt.setInt(1, id.toInt())
+                    ptmt.setInt(2, body.valor)
+                    ptmt.setString(3, body.tipo)
+                    ptmt.setString(4, body.descricao)
+                    ptmt.executeQuery().use { rs ->
+                        rs.next()
+                        rs.getInt(1) to rs.getInt(2)
+                    }
+                }
+            }
 
-        if (body.tipo == "d" && client.balance - body.valor < -client.limit) {
+            return TransactionResponse(
+                saldo = balance,
+                limite = limit,
+            )
+        } catch (e: Exception) {
             throw WebApplicationException(422)
         }
-
-        val transaction = Transaction(
-            id = 0,
-            clientId = id.toInt(),
-            value = body.valor,
-            type = body.tipo.toCharArray()[0],
-            description = body.descricao,
-        )
-        entityManager.persist(transaction)
-        client.updateBalance(body.valor, body.tipo)
-        entityManager.merge(client)
-
-        return TransactionResponse(
-            saldo = client.balance,
-            limite = client.limit,
-        )
     }
 
     @GET
@@ -63,36 +57,41 @@ class ClientsResource(
             throw WebApplicationException(404)
         }
 
-        val client: Client = entityManager.find(Client::class.java, id)
-            ?: throw WebApplicationException(404)
+        val (balance, limit) = datasource.connection.use { connection ->
+            connection.prepareStatement("SELECT saldo, limite FROM clientes WHERE id = ?").use { ptmt ->
+                ptmt.setInt(1, id.toInt())
+                ptmt.executeQuery().use { rs ->
+                    rs.next()
+                    rs.getInt(1) to rs.getInt(2)
+                }
+            }
+        }
 
-        val transactions: List<StatementTransaction>? = entityManager.createQuery(
-            """
-                SELECT t
-                  FROM Transaction t
-                 WHERE t.clientId = :client_id
-              ORDER BY t.id DESC
-                 LIMIT 10
-            """,
-            Transaction::class.java
-        )
-            .setParameter("client_id", id)
-            .resultList
-            .stream()
-            .map { transaction ->
-                StatementTransaction(
-                    description = transaction.description,
-                    type = transaction.type.toString(),
-                    value = transaction.value,
-                    performedIn = transaction.createdAt.toInstant().toString()
-                )
-            }.toList()
+        val transactions = datasource.connection.use { connection ->
+            connection.prepareStatement("SELECT tipo, valor, descricao, realizada_em FROM transacoes WHERE cliente_id = ? ORDER BY realizada_em DESC LIMIT 10").use { ptmt ->
+                ptmt.setInt(1, id.toInt())
+                ptmt.executeQuery().use { rs ->
+                    val transactions = mutableListOf<StatementTransaction>()
+                    while (rs.next()) {
+                        transactions.add(
+                            StatementTransaction(
+                                type = rs.getString(1)[0],
+                                value = rs.getInt(2),
+                                description = rs.getString(3),
+                                performedIn = rs.getTimestamp(4).toInstant().toString(),
+                            )
+                        )
+                    }
+                    transactions
+                }
+            }
+        }
 
         return StatementResponse(
             balance = Balance(
-                description = client.balance,
+                description = balance,
                 date = Timestamp(System.currentTimeMillis()).toInstant().toString(),
-                value = client.limit,
+                value = limit,
             ),
             statementTransactions = transactions,
         )

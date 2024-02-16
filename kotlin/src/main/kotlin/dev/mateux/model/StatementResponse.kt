@@ -26,7 +26,7 @@ data class StatementTransaction(
     val description: String? = null,
 
     @field:JsonProperty("tipo")
-    val type: String? = null,
+    val type: Char? = null,
 
     @field:JsonProperty("valor")
     val value: Int? = null,

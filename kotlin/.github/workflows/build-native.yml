@@ -37,4 +37,4 @@ jobs:
           context: .
           file: ./src/main/docker/Dockerfile.native-micro
           push: true
-          tags: mateuxlucax/rinha-de-backend-2024-q1-kotlin:native
+          tags: mateuxlucax/rinha-de-backend-2024-q1:quarkus
