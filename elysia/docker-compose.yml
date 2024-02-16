@@ -14,7 +14,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.525"
+          cpus: "0.45"
           memory: "100MB"
 
   rinha-api02:
@@ -61,5 +61,5 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.3"
+          cpus: "0.45"
           memory: "320MB"

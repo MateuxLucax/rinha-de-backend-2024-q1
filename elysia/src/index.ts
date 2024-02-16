@@ -2,10 +2,6 @@ import { Elysia } from "elysia";
 import Env from "./env";
 import sql from "./database";
 
-const limits: Record<number, number> = {}
-
-await tryGetLimit();
-
 export const app = new Elysia()
   .get('/clientes/:id/extrato', async ({ params: { id }, set }) => {
     const clientId = parseInt(id);
@@ -15,21 +11,21 @@ export const app = new Elysia()
     }
 
     const [balance, transactions] = await Promise.all([
-      sql`SELECT saldo FROM clientes WHERE id = ${clientId}`,
+      sql`SELECT saldo, limite FROM clientes WHERE id = ${clientId}`,
       sql`SELECT tipo, valor, descricao, realizada_em FROM transacoes WHERE cliente_id = ${clientId} ORDER BY realizada_em DESC LIMIT 10`
     ]);
 
     return {
       saldo: {
         total: balance[0].saldo as number,
-        limite: limits[clientId],
+        limite: balance[0].limite as number,
         data_extrato: new Date().toISOString(),
       },
       ultimas_transacoes: transactions.map(({ tipo, valor, descricao, realizada_em }) => ({
         tipo: tipo as string,
         valor: valor as number,
         descricao: descricao as string,
-        realizada_em: new Date(realizada_em * 1000).toISOString(),
+        realizada_em: new Date(realizada_em).toISOString(),
       }))
     }
   })
@@ -46,41 +42,18 @@ export const app = new Elysia()
       return 
     }
 
-    const results = type == 'c' 
-      ? await sql`SELECT creditar(${clientId}, ${value}, ${description}) AS saldo` 
-      : await sql`SELECT debitar(${clientId}, ${value}, ${description}, ${limits[clientId]}) AS saldo`;
+    try {
+      const result = await sql`SELECT new_saldo, limite FROM update_saldo_cliente(${clientId}, ${value}, ${type}, ${description})`;
 
-    if (results[0].saldo == null) {
+      return {
+        saldo: result[0].new_saldo as number,
+        limite: result[0].limite as number
+      }
+    } catch (error) {
       set.status = 422;
       return;
-    }
-
-    return {
-      saldo: results[0].saldo as number,
-      limite: limits[clientId]
     }
   })
   .listen(Env.port);
 
 console.log(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`);
-
-export async function tryGetLimit({ tries = 1 } = {}) {
-  if (tries > 10) throw new Error('🤬 Could not retrieve limits');
-
-  try {
-    const limitResult = await sql`SELECT id, limite FROM clientes`;
-    for (const { id, limite } of limitResult) {
-      limits[id] = limite;
-    }
-
-    if (limitResult.length == 5) {
-      console.log('🤯 Limits loaded');
-      return;
-    }
-  } catch(_) {
-    console.log(`🤔 Trying to retrieve limits again in ${tries}s`);
-    await new Promise(resolve => setTimeout(resolve, 1000 * tries));
-  }
-
-  return tryGetLimit({ tries: ++tries });
-}
