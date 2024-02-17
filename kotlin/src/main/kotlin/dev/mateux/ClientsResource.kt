@@ -57,43 +57,54 @@ class ClientsResource(
             throw WebApplicationException(404)
         }
 
-        val (balance, limit) = datasource.connection.use { connection ->
-            connection.prepareStatement("SELECT saldo, limite FROM clientes WHERE id = ?").use { ptmt ->
+        return datasource.connection.use { connection ->
+            connection.prepareStatement("""
+               SELECT c.saldo AS total,
+                      c.limite,
+                      t.valor,
+                      t.tipo,
+                      t.descricao,
+                      t.realizada_em
+                 FROM clientes c
+            LEFT JOIN transacoes t
+                   ON c.id = t.cliente_id
+                WHERE c.id = ?
+             GROUP BY c.id, c.saldo, c.limite, t.valor, t.tipo, t.descricao, t.realizada_em
+             ORDER BY t.realizada_em DESC
+                LIMIT 10
+            """).use { ptmt ->
                 ptmt.setInt(1, id.toInt())
                 ptmt.executeQuery().use { rs ->
-                    rs.next()
-                    rs.getInt(1) to rs.getInt(2)
-                }
-            }
-        }
+                    val balance = if (rs.next()) {
+                        Balance(
+                            description = rs.getInt("total"),
+                            date = Timestamp(System.currentTimeMillis()).toString(),
+                            value = rs.getInt("limite"),
+                        )
+                    } else {
+                        null
+                    }
 
-        val transactions = datasource.connection.use { connection ->
-            connection.prepareStatement("SELECT tipo, valor, descricao, realizada_em FROM transacoes WHERE cliente_id = ? ORDER BY realizada_em DESC LIMIT 10").use { ptmt ->
-                ptmt.setInt(1, id.toInt())
-                ptmt.executeQuery().use { rs ->
                     val transactions = mutableListOf<StatementTransaction>()
                     while (rs.next()) {
+                        if (rs.getString("tipo").isNullOrEmpty()) continue
+
                         transactions.add(
                             StatementTransaction(
-                                type = rs.getString(1)[0],
-                                value = rs.getInt(2),
-                                description = rs.getString(3),
-                                performedIn = rs.getTimestamp(4).toInstant().toString(),
+                                description = rs.getString("descricao"),
+                                type = rs.getString("tipo").first(),
+                                value = rs.getInt("valor"),
+                                performedIn = rs.getString("realizada_em"),
                             )
                         )
                     }
-                    transactions
+
+                    StatementResponse(
+                        balance = balance,
+                        statementTransactions = transactions,
+                    )
                 }
             }
         }
-
-        return StatementResponse(
-            balance = Balance(
-                description = balance,
-                date = Timestamp(System.currentTimeMillis()).toInstant().toString(),
-                value = limit,
-            ),
-            statementTransactions = transactions,
-        )
     }
 }
