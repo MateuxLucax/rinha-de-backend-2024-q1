@@ -53,7 +53,7 @@ RETURNING saldo, limite
   END IF;
 
   INSERT INTO transacoes (cliente_id, valor, tipo, descricao, realizada_em)
-  VALUES (idCliente, valor, tipo, descricao, NOW() AT TIME ZONE 'utc');
+  VALUES (idCliente, ABS(valor), tipo, descricao, NOW() AT TIME ZONE 'utc');
 
   RETURN payload;
 

@@ -17,7 +17,7 @@ class ClientsResource(
     @Produces(MediaType.APPLICATION_JSON)
     @RunOnVirtualThread
     fun transaction(body: TransactionPost, id: String): TransactionResponse {
-        if (body.tipo == null || body.valor == null || body.descricao.isNullOrEmpty() || body.descricao.length > 10 || body.valor !is Int || body.tipo !in listOf("c", "d")) {
+        if (body.tipo == null || body.valor == null || body.descricao.isNullOrEmpty() || body.descricao.length > 10 || body.valor !is Int || body.valor < 0 || body.tipo !in listOf("c", "d")) {
             throw WebApplicationException(422)
         }
 
@@ -25,27 +25,34 @@ class ClientsResource(
             throw WebApplicationException(404)
         }
 
-        try {
-            val (balance, limit) = datasource.connection.use { connection ->
-                connection.prepareStatement("SELECT new_saldo, limite FROM update_saldo_cliente(?, ?, ?, ?)").use { ptmt ->
-                    ptmt.setInt(1, id.toInt())
-                    ptmt.setInt(2, body.valor)
-                    ptmt.setString(3, body.tipo)
-                    ptmt.setString(4, body.descricao)
-                    ptmt.executeQuery().use { rs ->
-                        rs.next()
-                        rs.getInt(1) to rs.getInt(2)
-                    }
+        val (balance, limit) = datasource.connection.use { connection ->
+            connection.prepareStatement("""
+                SELECT * FROM adiciona_transacao(
+                   CAST(? AS SMALLINT), 
+                   CAST(? AS INT), 
+                   CAST(? AS CHAR(1)), 
+                   CAST(? AS VARCHAR(10))
+                )
+            """).use { ptmt ->
+                ptmt.setInt(1, id.toInt())
+                ptmt.setInt(2, body.valor * if (body.tipo == "d") -1 else 1)
+                ptmt.setString(3, body.tipo)
+                ptmt.setString(4, body.descricao)
+                ptmt.executeQuery().use { rs ->
+                    rs.next()
+                    rs.getInt(1) to rs.getInt(2)
                 }
             }
+        }
 
-            return TransactionResponse(
-                saldo = balance,
-                limite = limit,
-            )
-        } catch (e: Exception) {
+        if (limit == -1) {
             throw WebApplicationException(422)
         }
+
+        return TransactionResponse(
+            saldo = balance,
+            limite = limit,
+        )
     }
 
     @GET
@@ -57,54 +64,43 @@ class ClientsResource(
             throw WebApplicationException(404)
         }
 
-        return datasource.connection.use { connection ->
-            connection.prepareStatement("""
-               SELECT c.saldo AS total,
-                      c.limite,
-                      t.valor,
-                      t.tipo,
-                      t.descricao,
-                      t.realizada_em
-                 FROM clientes c
-            LEFT JOIN transacoes t
-                   ON c.id = t.cliente_id
-                WHERE c.id = ?
-             GROUP BY c.id, c.saldo, c.limite, t.valor, t.tipo, t.descricao, t.realizada_em
-             ORDER BY t.realizada_em DESC
-                LIMIT 10
-            """).use { ptmt ->
+        val (balance, limit) = datasource.connection.use { connection ->
+            connection.prepareStatement("SELECT saldo, limite FROM clientes WHERE id = ?").use { ptmt ->
                 ptmt.setInt(1, id.toInt())
                 ptmt.executeQuery().use { rs ->
-                    val balance = if (rs.next()) {
-                        Balance(
-                            description = rs.getInt("total"),
-                            date = Timestamp(System.currentTimeMillis()).toString(),
-                            value = rs.getInt("limite"),
-                        )
-                    } else {
-                        null
-                    }
-
-                    val transactions = mutableListOf<StatementTransaction>()
-                    while (rs.next()) {
-                        if (rs.getString("tipo").isNullOrEmpty()) continue
-
-                        transactions.add(
-                            StatementTransaction(
-                                description = rs.getString("descricao"),
-                                type = rs.getString("tipo").first(),
-                                value = rs.getInt("valor"),
-                                performedIn = rs.getString("realizada_em"),
-                            )
-                        )
-                    }
-
-                    StatementResponse(
-                        balance = balance,
-                        statementTransactions = transactions,
-                    )
+                    rs.next()
+                    rs.getInt(1) to rs.getInt(2)
                 }
             }
         }
+
+        val transactions = datasource.connection.use { connection ->
+            connection.prepareStatement("SELECT tipo, valor, descricao, realizada_em FROM transacoes WHERE cliente_id = ? ORDER BY realizada_em DESC LIMIT 10").use { ptmt ->
+                ptmt.setInt(1, id.toInt())
+                ptmt.executeQuery().use { rs ->
+                    val transactions = mutableListOf<StatementTransaction>()
+                    while (rs.next()) {
+                        transactions.add(
+                            StatementTransaction(
+                                type = rs.getString(1)[0],
+                                value = rs.getInt(2),
+                                description = rs.getString(3),
+                                performedIn = rs.getTimestamp(4).toInstant().toString(),
+                            )
+                        )
+                    }
+                    transactions
+                }
+            }
+        }
+
+        return StatementResponse(
+            balance = Balance(
+                description = balance,
+                date = Timestamp(System.currentTimeMillis()).toInstant().toString(),
+                value = limit,
+            ),
+            statementTransactions = transactions,
+        )
     }
 }
