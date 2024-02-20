@@ -37,21 +37,21 @@ export const app = new Elysia()
     }
 
     const { tipo: type, valor: value, descricao: description } = body as { tipo: string, valor: number, descricao: string };
-    if (type == null || value == null || !Number.isInteger(value) || description == null || description.length == 0 || description.length > 10 || (type != 'c' && type != 'd')) {
+    if (type == null || value == null || !Number.isInteger(value) || value <= 0 || description == null || description.length == 0 || description.length > 10 || (type != 'c' && type != 'd')) {
       set.status = 422;
       return 
     }
 
-    try {
-      const result = await sql`SELECT new_saldo, limite FROM update_saldo_cliente(${clientId}, ${value}, ${type}, ${description})`;
+    const result = await sql`SELECT saldo, limite FROM adiciona_transacao(${clientId}, ${type === 'c' ? value : -value}, ${type}, ${description})`;
 
-      return {
-        saldo: result[0].new_saldo as number,
-        limite: result[0].limite as number
-      }
-    } catch (error) {
+    if (result[0].saldo == -1) {
       set.status = 422;
       return;
+    }
+
+    return {
+      saldo: result[0].saldo as number,
+      limite: result[0].limite as number
     }
   })
   .listen(Env.port);

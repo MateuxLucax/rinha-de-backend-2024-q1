@@ -3,7 +3,7 @@ version: "3.5"
 services:
   rinha-db:
     container_name: rinha-db
-    image: postgres:latest
+    image: postgres:16.2
     hostname: db
     environment:
       - POSTGRES_PASSWORD=123
