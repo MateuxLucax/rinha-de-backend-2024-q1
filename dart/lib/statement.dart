@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:postgres/postgres.dart';
 import 'package:rinha_de_backend_2024_q1_dart/database.dart';
 import 'package:rinha_de_backend_2024_q1_dart/response.dart';
 
@@ -14,19 +13,9 @@ class Statement {
 
     Database.pool.withConnection((connection) async {
       final result = await Future.wait([
+        connection.execute('SELECT saldo, limite FROM clientes WHERE id = $id'),
         connection.execute(
-          Sql.named('SELECT saldo, limite FROM clientes WHERE id = @id'),
-          parameters: {
-            'id': id,
-          },
-        ),
-        connection.execute(
-          Sql.named(
-            'SELECT tipo, valor, descricao, realizada_em FROM transacoes WHERE cliente_id = @id ORDER BY realizada_em DESC LIMIT 10',
-          ),
-          parameters: {
-            'id': id,
-          },
+          'SELECT valor, tipo, descricao, realizada_em FROM transacoes WHERE cliente_id = $id ORDER BY realizada_em DESC LIMIT 10',
         )
       ]);
 
@@ -39,8 +28,8 @@ class Statement {
         'transacoes': result.last
             .map(
               (transaction) => {
-                'tipo': transaction[0] as String,
                 'valor': transaction[1] as int,
+                'tipo': transaction[0] as String,
                 'descricao': transaction[2] as String,
                 'realizada_em': (transaction[3] as DateTime).toIso8601String(),
               },

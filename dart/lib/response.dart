@@ -7,12 +7,8 @@ class Response {
     request.response.close();
   }
 
-  static void json(
-    Map<String, dynamic> body,
-    HttpRequest request, {
-    int statusCode = HttpStatus.ok,
-  }) {
-    request.response.statusCode = statusCode;
+  static void json(Map<String, dynamic> body, HttpRequest request) {
+    request.response.statusCode = HttpStatus.ok;
     request.response.write(jsonEncode(body));
     request.response.close();
   }

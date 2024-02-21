@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:rinha_de_backend_2024_q1_dart/environment.dart';
-import 'package:rinha_de_backend_2024_q1_dart/statement.dart' as s;
-import 'package:rinha_de_backend_2024_q1_dart/transaction.dart' as t;
+import 'package:rinha_de_backend_2024_q1_dart/statement.dart';
+import 'package:rinha_de_backend_2024_q1_dart/transaction.dart';
 
 void main(List<String> args) async {
   final server = await HttpServer.bind(
@@ -16,10 +16,10 @@ void main(List<String> args) async {
     if (pathSegments.length >= 3 && pathSegments[0] == 'clientes') {
       switch (pathSegments[2]) {
         case 'transacoes':
-          t.Transaction.createTransaction(request);
+          Transaction.createTransaction(request);
           break;
         case 'extrato':
-          s.Statement.getStatement(request);
+          Statement.getStatement(request);
           break;
         default:
           request.response.statusCode = HttpStatus.notFound;

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:postgres/postgres.dart';
 import 'package:rinha_de_backend_2024_q1_dart/database.dart';
 import 'package:rinha_de_backend_2024_q1_dart/response.dart';
 
@@ -37,15 +36,7 @@ class Transaction {
     Database.pool.withConnection(
       (connection) async {
         final response = await connection.execute(
-          Sql.named(
-            'SELECT saldo, limite FROM adiciona_transacao(@clientId, @value, @type, @description)',
-          ),
-          parameters: {
-            'clientId': id,
-            'value': type == 'c' ? value : -value,
-            'type': type,
-            'description': description,
-          },
+          'SELECT saldo, limite FROM adiciona_transacao($id, $type, ${type == 'c' ? value : -value}, $description)',
         );
 
         if (response.first[1] == -1) {
