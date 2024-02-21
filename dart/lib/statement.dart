@@ -5,10 +5,7 @@ import 'package:rinha_de_backend_2024_q1_dart/database.dart';
 import 'package:rinha_de_backend_2024_q1_dart/response.dart';
 
 class Statement {
-  static Future<void> getStatement(
-    HttpRequest request,
-    Map<int, int> limits,
-  ) async {
+  static Future<void> getStatement(HttpRequest request) async {
     final int id = int.tryParse(request.uri.pathSegments[1]) ?? 0;
 
     if (id > 5 || id < 1) {
@@ -18,7 +15,7 @@ class Statement {
     Database.pool.withConnection((connection) async {
       final result = await Future.wait([
         connection.execute(
-          Sql.named('SELECT saldo FROM clientes WHERE id = @id'),
+          Sql.named('SELECT saldo, limite FROM clientes WHERE id = @id'),
           parameters: {
             'id': id,
           },
@@ -35,9 +32,9 @@ class Statement {
 
       Response.json({
         'saldo': {
-          'limite': limits[id] as int,
           'total': result.first[0][0] as int,
-          'data_extração': DateTime.now().toIso8601String(),
+          'limite': result.first[0][1] as int,
+          'data_extrato': DateTime.now().toIso8601String(),
         },
         'transacoes': result.last
             .map(
@@ -45,16 +42,11 @@ class Statement {
                 'tipo': transaction[0] as String,
                 'valor': transaction[1] as int,
                 'descricao': transaction[2] as String,
-                'realizada_em': DateTime.fromMillisecondsSinceEpoch(
-                  transaction[3] as int,
-                ).toIso8601String(),
+                'realizada_em': (transaction[3] as DateTime).toIso8601String(),
               },
             )
             .toList(),
       }, request);
-    }).catchError((error, stackTrace) {
-      print(error);
-      Response.status(HttpStatus.unprocessableEntity, request);
     });
   }
 }
