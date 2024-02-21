@@ -28,8 +28,8 @@ class Statement {
         'transacoes': result.last
             .map(
               (transaction) => {
-                'valor': transaction[1] as int,
-                'tipo': transaction[0] as String,
+                'valor': transaction[0] as int,
+                'tipo': transaction[1] as String,
                 'descricao': transaction[2] as String,
                 'realizada_em': (transaction[3] as DateTime).toIso8601String(),
               },

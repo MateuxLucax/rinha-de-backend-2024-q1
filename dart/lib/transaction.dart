@@ -36,7 +36,7 @@ class Transaction {
     Database.pool.withConnection(
       (connection) async {
         final response = await connection.execute(
-          'SELECT saldo, limite FROM adiciona_transacao($id, $type, ${type == 'c' ? value : -value}, $description)',
+          'SELECT saldo, limite FROM adiciona_transacao($id::SMALLINT, $value::INT, \'$type\'::CHAR(1), \'$description\'::VARCHAR(10))',
         );
 
         if (response.first[1] == -1) {
