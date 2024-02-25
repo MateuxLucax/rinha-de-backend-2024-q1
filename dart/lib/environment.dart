@@ -4,9 +4,6 @@ class Environment {
   static int port =
       int.tryParse(Platform.environment['port'] ?? '8080') ?? 8080;
 
-  static int isolates =
-      int.tryParse(Platform.environment['isolates'] ?? '7') ?? 7;
-
   static String databaseHost =
       Platform.environment['databaseHost'] ?? "localhost";
   static String databaseName = Platform.environment['databaseName'] ?? "rinha";

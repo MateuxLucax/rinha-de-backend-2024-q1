@@ -18,6 +18,7 @@ class Transaction {
     );
 
     final String requestBody = utf8.decode(bodyBytes);
+
     final Map<String, dynamic> body = jsonDecode(requestBody);
     final String? type = body['tipo'];
     final value = body['valor'];

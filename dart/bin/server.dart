@@ -6,19 +6,9 @@ import 'package:rinha_de_backend_2024_q1_dart/statement.dart';
 import 'package:rinha_de_backend_2024_q1_dart/transaction.dart';
 
 void main(List<String> args) async {
-  for (var i = 1; i < Environment.isolates; i++) {
-    Isolate.spawn(server, []);
-  }
-
-  server([]);
-  print('Server running on port ${Environment.port}');
-}
-
-void server(List<dynamic> args) async {
   final server = await HttpServer.bind(
     InternetAddress.anyIPv4,
-    Environment.port,
-    shared: true,
+    Environment.port
   );
 
   server.listen((request) {
@@ -27,18 +17,21 @@ void server(List<dynamic> args) async {
       switch (pathSegments[2]) {
         case 'transacoes':
           Transaction.createTransaction(request);
-          break;
+          return;
         case 'extrato':
           Statement.getStatement(request);
-          break;
+          return;
         default:
           request.response.statusCode = HttpStatus.notFound;
           request.response.close();
-          break;
+          return;
       }
     } else {
       request.response.statusCode = HttpStatus.notFound;
       request.response.close();
+      return;
     }
   });
+
+  print('Server running on port ${Environment.port}');
 }

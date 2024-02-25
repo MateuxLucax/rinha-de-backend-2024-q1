@@ -11,11 +11,12 @@ services:
     network_mode: "host"
     environment:
       - port=8080
+      - maxConnectionCount=24
     deploy:
       resources:
         limits:
-          cpus: "0.3"
-          memory: "60MB"
+          cpus: "0.35"
+          memory: "70MB"
 
   rinha-api02:
     <<: *api
@@ -61,5 +62,5 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.7"
-          memory: "400MB"
+          cpus: "0.6"
+          memory: "380MB"
