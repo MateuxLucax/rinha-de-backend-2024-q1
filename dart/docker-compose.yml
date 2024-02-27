@@ -34,6 +34,12 @@ services:
     depends_on:
       - rinha-api01
       - rinha-api02
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:8080/ping" ]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 5s
     deploy:
       resources:
         limits:
@@ -51,7 +57,7 @@ services:
     volumes:
       - ../sql/script.sql:/docker-entrypoint-initdb.d/script.sql
       - ../sql/postgresql.conf:/etc/postgresql/postgresql.conf
-    command: [ "postgres", "-c", "config_file=/etc/postgresql/postgresql.conf", "-c", "fsync=off" ]
+    command: [ "postgres", "-c", "config_file=/etc/postgresql/postgresql.conf" ]
     network_mode: "host"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]

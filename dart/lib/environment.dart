@@ -2,7 +2,7 @@ import 'dart:io';
 
 class Environment {
   static int port =
-      int.tryParse(Platform.environment['port'] ?? '8080') ?? 8080;
+      int.tryParse(Platform.environment['port'] ?? '9999') ?? 9999;
 
   static String databaseHost =
       Platform.environment['databaseHost'] ?? "localhost";

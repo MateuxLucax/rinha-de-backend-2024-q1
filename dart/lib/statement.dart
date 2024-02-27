@@ -15,8 +15,8 @@ class Statement {
       final result = await Future.wait([
         connection.execute('SELECT saldo, limite FROM clientes WHERE id = $id'),
         connection.execute(
-          'SELECT valor, tipo, descricao, realizada_em FROM transacoes WHERE cliente_id = $id ORDER BY realizada_em DESC LIMIT 10',
-        )
+          'SELECT valor, tipo, descricao, realizada_em FROM transacoes WHERE cliente_id = $id ORDER BY id DESC LIMIT 10',
+        ),
       ]);
 
       Response.json({
@@ -25,7 +25,7 @@ class Statement {
           'limite': result.first[0][1] as int,
           'data_extrato': DateTime.now().toIso8601String(),
         },
-        'transacoes': result.last
+        'ultimas_transacoes': result.last
             .map(
               (transaction) => {
                 'valor': transaction[0] as int,

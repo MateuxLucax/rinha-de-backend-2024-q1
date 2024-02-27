@@ -18,16 +18,16 @@ class Transaction {
     );
 
     final String requestBody = utf8.decode(bodyBytes);
-
     final Map<String, dynamic> body = jsonDecode(requestBody);
     final String? type = body['tipo'];
-    final value = body['valor'];
+    final dynamic value = body['valor'];
     final String? description = body['descricao'];
 
     if (type == null ||
         value == null ||
-        value is! int ||
         description == null ||
+        value is! int ||
+        value < 1 ||
         description.isEmpty ||
         description.length > 10 ||
         (type != 'c' && type != 'd')) {
@@ -37,21 +37,19 @@ class Transaction {
     Database.pool.withConnection(
       (connection) async {
         final response = await connection.execute(
-          'SELECT saldo, limite FROM adiciona_transacao($id::SMALLINT, $value::INT, \'$type\'::CHAR(1), \'$description\'::VARCHAR(10))',
+          "CALL adiciona_transacao($id::INT2, $value::INT4, ${type == 'c' ? value : -value}::INT4, '$type'::CHAR(1), '$description'::VARCHAR(10), NULL, NULL)",
         );
-
-        if (response.first[1] == -1) {
-          return Response.status(HttpStatus.unprocessableEntity, request);
-        }
 
         return Response.json(
           {
-            'limite': response[0][1] as int,
-            'saldo': response[0][0] as int,
+            'saldo': response.first.first as int,
+            'limite': response.first.last as int,
           },
           request,
         );
       },
-    );
+    ).onError((_, __) {
+      return Response.status(HttpStatus.unprocessableEntity, request);
+    });
   }
 }

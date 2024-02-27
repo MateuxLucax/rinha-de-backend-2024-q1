@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS clientes (
   id SMALLINT PRIMARY KEY,
   limite INT NOT NULL,
   saldo INT NOT NULL DEFAULT 0
+  CHECK (saldo > -limite)
 );
 
 CREATE INDEX pk_cliente_idx ON clientes (id) INCLUDE (saldo);
@@ -15,47 +16,36 @@ VALUES (1, 1000 * 100),
 ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS transacoes (
+  id SERIAL PRIMARY KEY,
   cliente_id SMALLINT NOT NULL,
   valor INT NOT NULL,
   tipo CHAR(1) NOT NULL,
   descricao VARCHAR(10) NOT NULL,
-  realizada_em TIMESTAMPTZ NOT NULL
+  realizada_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  FOREIGN KEY (cliente_id) REFERENCES clientes (id)
 );
 
-CREATE INDEX idx_transacoes_cliente_realizada_em ON transacoes (cliente_id, realizada_em DESC);
+CREATE INDEX idx_transacoes_cliente_id ON transacoes (cliente_id, id DESC);
 
-CREATE TYPE adiciona_transacao_retorno AS (saldo INT, limite INT);
-
-/**
-  * Adiciona uma transação para um cliente.
-  * 
-  * @param {SMALLINT}    idCliente - ID do cliente.
-  * @param {INT}         valor     - Valor da transação. Deve ser positivo para crédito e negativo para débito.
-  * @param {CHAR(1)}     tipo      - Tipo da transação (C para crédito e D para débito).
-  * @param {VARCHAR(10)} descricao - Descrição da transação.
-  * @returns {TABLE}               - Retorna o novo saldo e o limite do cliente.
-  */
-CREATE OR REPLACE FUNCTION adiciona_transacao(idCliente SMALLINT, valor INT, tipo CHAR(1), descricao VARCHAR(10))
-RETURNS adiciona_transacao_retorno AS $$
-DECLARE payload adiciona_transacao_retorno;
+CREATE OR REPLACE PROCEDURE adiciona_transacao(
+  id_cliente SMALLINT,
+  valor INTEGER,
+  valor_extrato INTEGER, 
+  tipo CHAR(1),
+  descricao VARCHAR(10),
+  OUT saldo_atual INTEGER,
+  OUT limite_atual INTEGER
+)
+LANGUAGE plpgsql AS
+$$
 BEGIN
+  INSERT INTO transacoes (cliente_id, valor, tipo, descricao) VALUES (id_cliente, valor, tipo, descricao);
 
-   UPDATE clientes
-      SET saldo = saldo + valor
-    WHERE id = idCliente
-      AND (valor > 0 OR saldo + valor >= -limite)
-RETURNING saldo, limite
-     INTO payload;
+  UPDATE clientes
+     SET saldo = saldo + valor_extrato
+   WHERE id = id_cliente RETURNING saldo, limite INTO saldo_atual, limite_atual;
 
-  IF NOT FOUND THEN
-    SELECT -1, -1 INTO payload;
-    RETURN payload;
-  END IF;
-
-  INSERT INTO transacoes (cliente_id, valor, tipo, descricao, realizada_em)
-  VALUES (idCliente, ABS(valor), tipo, descricao, NOW() AT TIME ZONE 'utc');
-
-  RETURN payload;
-
+  COMMIT;
+  RETURN;
 END;
-$$ LANGUAGE plpgsql;
+$$;
