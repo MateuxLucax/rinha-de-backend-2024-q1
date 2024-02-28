@@ -31,7 +31,6 @@ jobs:
 
       - name: Build Docker Image and Push to Docker Hub
         uses: docker/build-push-action@v5
-        working-directory: ./kotlin
         with:
           context: "{{defaultContext}}:kotlin"
           file: ./Dockerfile.native-micro
