@@ -24,7 +24,6 @@ jobs:
           java-version: '21'
 
       - name: Build Quarkus Application
-        working-directory: kotlin
         working-directory: ./kotlin
         run: |
           ./gradlew build -Dquarkus.package.type=native -Dquarkus.native.container-build=true
