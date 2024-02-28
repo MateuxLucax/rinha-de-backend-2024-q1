@@ -23,6 +23,6 @@ jobs:
         uses: docker/build-push-action@v5
         working-directory: ./dart
         with:
-          context: .
+          context: "{{defaultContext}}:dart"
           push: true
           tags: mateuxlucax/rinha-de-backend-2024-q1:dart
