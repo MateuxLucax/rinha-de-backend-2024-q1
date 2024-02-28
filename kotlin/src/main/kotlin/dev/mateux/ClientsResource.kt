@@ -17,7 +17,7 @@ class ClientsResource(
     @Produces(MediaType.APPLICATION_JSON)
     @RunOnVirtualThread
     fun transaction(body: TransactionPost, id: String): TransactionResponse {
-        if (body.tipo == null || body.valor == null || body.descricao.isNullOrEmpty() || body.descricao.length > 10 || body.valor !is Int || body.valor < 0 || body.tipo !in listOf("c", "d")) {
+        if (body.tipo == null || body.valor == null || body.descricao.isNullOrEmpty() || body.descricao.length > 10 || body.valor !is Int || body.valor < 1 || body.tipo !in listOf("c", "d")) {
             throw WebApplicationException(422)
         }
 
@@ -25,34 +25,23 @@ class ClientsResource(
             throw WebApplicationException(404)
         }
 
-        val (balance, limit) = datasource.connection.use { connection ->
-            connection.prepareStatement("""
-                SELECT * FROM adiciona_transacao(
-                   CAST(? AS SMALLINT), 
-                   CAST(? AS INT), 
-                   CAST(? AS CHAR(1)), 
-                   CAST(? AS VARCHAR(10))
-                )
-            """).use { ptmt ->
-                ptmt.setInt(1, id.toInt())
-                ptmt.setInt(2, body.valor * if (body.tipo == "d") -1 else 1)
-                ptmt.setString(3, body.tipo)
-                ptmt.setString(4, body.descricao)
-                ptmt.executeQuery().use { rs ->
-                    rs.next()
-                    rs.getInt(1) to rs.getInt(2)
+        try {
+            val (balance, limit) = datasource.connection.use { connection ->
+                connection.createStatement().use { ptmt ->
+                    ptmt.executeQuery("CALL adiciona_transacao($id::INT2, ${body.valor}::INT4, ${if (body.tipo == "c") body.valor else -body.valor}::INT4, '${body.tipo}'::CHAR(1), '${body.descricao}'::VARCHAR(10), NULL, NULL)").use { rs ->
+                        rs.next()
+                        rs.getInt(1) to rs.getInt(2)
+                    }
                 }
             }
-        }
 
-        if (limit == -1) {
+            return TransactionResponse(
+                saldo = balance,
+                limite = limit,
+            )
+        } catch (ignored: Exception) {
             throw WebApplicationException(422)
         }
-
-        return TransactionResponse(
-            saldo = balance,
-            limite = limit,
-        )
     }
 
     @GET
@@ -65,9 +54,8 @@ class ClientsResource(
         }
 
         val (balance, limit) = datasource.connection.use { connection ->
-            connection.prepareStatement("SELECT saldo, limite FROM clientes WHERE id = ?").use { ptmt ->
-                ptmt.setInt(1, id.toInt())
-                ptmt.executeQuery().use { rs ->
+            connection.createStatement().use { ptmt ->
+                ptmt.executeQuery("SELECT saldo, limite FROM clientes WHERE id = $id").use { rs ->
                     rs.next()
                     rs.getInt(1) to rs.getInt(2)
                 }
@@ -75,9 +63,8 @@ class ClientsResource(
         }
 
         val transactions = datasource.connection.use { connection ->
-            connection.prepareStatement("SELECT tipo, valor, descricao, realizada_em FROM transacoes WHERE cliente_id = ? ORDER BY realizada_em DESC LIMIT 10").use { ptmt ->
-                ptmt.setInt(1, id.toInt())
-                ptmt.executeQuery().use { rs ->
+            connection.createStatement().use { ptmt ->
+                ptmt.executeQuery("SELECT tipo, valor, descricao, realizada_em FROM transacoes WHERE cliente_id = $id ORDER BY id DESC LIMIT 10").use { rs ->
                     val transactions = mutableListOf<StatementTransaction>()
                     while (rs.next()) {
                         transactions.add(
