@@ -8,9 +8,8 @@ COPY . .
 
 RUN wget https://services.gradle.org/distributions/gradle-8.6-bin.zip -O gradle.zip \
     mkdir /opt/gradle \
-    unzip -d /opt/gradle gradle.zip
-
-RUN export PATH=$PATH:/opt/gradle/gradle-8.6/bin \
+    unzip -d /opt/gradle gradle.zip \
+    export PATH=$PATH:/opt/gradle/gradle-8.6/bin \
     gradle --version \
     ./gradlew build -Dquarkus.package.type=native -Dquarkus.native.container-build=true
 
