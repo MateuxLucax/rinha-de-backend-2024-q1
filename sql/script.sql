@@ -1,8 +1,20 @@
-CREATE TABLE IF NOT EXISTS clientes (
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+SET default_tablespace = '';
+SET default_table_access_method = heap;
+
+CREATE UNLOGGED TABLE IF NOT EXISTS clientes (
   id SMALLINT PRIMARY KEY,
   limite INT NOT NULL,
   saldo INT NOT NULL DEFAULT 0
-  CHECK (saldo > -limite)
+  CONSTRAINT saldo CHECK (saldo > -limite)
 );
 
 CREATE INDEX pk_cliente_idx ON clientes (id) INCLUDE (saldo);
@@ -15,7 +27,7 @@ VALUES (1, 1000 * 100),
        (5, 5000 * 100)
 ON CONFLICT DO NOTHING;
 
-CREATE TABLE IF NOT EXISTS transacoes (
+CREATE UNLOGGED TABLE IF NOT EXISTS transacoes (
   id SERIAL PRIMARY KEY,
   cliente_id SMALLINT NOT NULL,
   valor INT NOT NULL,

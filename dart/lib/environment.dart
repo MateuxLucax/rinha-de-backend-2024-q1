@@ -16,5 +16,5 @@ class Environment {
   static int queryTimeout =
       int.tryParse(Platform.environment['queryTimeout'] ?? '30') ?? 30;
   static int maxConnectionCount =
-      int.tryParse(Platform.environment['maxConnectionCount'] ?? '64') ?? 64;
+      int.tryParse(Platform.environment['maxConnectionCount'] ?? '12') ?? 12;
 }

@@ -5,16 +5,16 @@ import 'package:rinha_de_backend_2024_q1_dart/statement.dart';
 import 'package:rinha_de_backend_2024_q1_dart/transaction.dart';
 
 void main(List<String> args) async {
-  HttpServer.bind(
+  await HttpServer.bind(
     InternetAddress.anyIPv4,
     Environment.port,
   ).then((server) {
-    print('Server running on port ${Environment.port}');
+    print('server running on port ${Environment.port} - ${Environment.maxConnectionCount} database connections');
 
     server.listen((request) {
       final pathSegments = request.uri.pathSegments;
-      if (pathSegments.length >= 3 && pathSegments[0] == 'clientes') {
-        switch (pathSegments[2]) {
+      if (pathSegments.first == 'clientes') {
+        switch (pathSegments.last) {
           case 'transacoes':
             Transaction.createTransaction(request);
             return;

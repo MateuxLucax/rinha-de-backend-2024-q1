@@ -12,7 +12,7 @@ services:
     environment:
       - QUARKUS_HTTP_PORT=8080
       - DATABASE_URL=jdbc:postgresql://127.0.0.1:5432/rinha
-      - QUARKUS_DATASOURCE_JDBC_MAX_SIZE=96
+      - QUARKUS_DATASOURCE_JDBC_MAX_SIZE=32
       - QUARKUS_DATASOURCE_JDBC_INITIAL_SIZE=12
     deploy:
       resources:
@@ -26,6 +26,9 @@ services:
     container_name: rinha-api02
     environment:
       - QUARKUS_HTTP_PORT=8081
+      - DATABASE_URL=jdbc:postgresql://127.0.0.1:5432/rinha
+      - QUARKUS_DATASOURCE_JDBC_MAX_SIZE=32
+      - QUARKUS_DATASOURCE_JDBC_INITIAL_SIZE=12
 
   rinha-nginx:
     image: nginx:latest
